@@ -28,7 +28,7 @@ Ein KI-gestützter E-Mail-Assistent mit n8n – automatisiert die Sortierung, An
 
 ## 📸 Vorschau
 
-![Workflow](./assets/workflow-screenshot.png)
+![Workflow](assets/workflow-screenshot.PNG)
 
 ## 🧠 Inspiration
 
