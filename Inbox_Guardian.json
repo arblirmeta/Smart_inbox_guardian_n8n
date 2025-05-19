@@ -1,0 +1,2685 @@
+{
+  "name": "Inbox Guardian",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {},
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1960,
+        560
+      ],
+      "id": "eae29948-c752-4346-ab36-d24894f6c980",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Pon7rp85dgZ4oWvL",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -1180,
+        1140
+      ],
+      "id": "d65b1d26-0287-47e4-a2ef-6f5c0209433f",
+      "name": "GPT 4o mini",
+      "credentials": {
+        "openAiApi": {
+          "id": "RsP0Vd0N2f3iody2",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Nutzer query: {{ $json.text }}",
+        "options": {
+          "systemMessage": "=# Übersicht\n\nDu bist ein persönlicher Assistent. Deine Aufgabe ist es, die eingehende Anfrage zu analysieren und die Absicht des Nutzers zu erkennen.\n\n## Tools\n\nGet_All_Contacts – Verwende dieses Tool, um Kontaktinformationen wie E-Mail-Adressen abzurufen. Du musst dieses Tool verwenden, wenn der Nutzer ein Google Calendar Ereignis mit einem Teilnehmer erstellen möchte (Wenn kein Teilnehmer angegeben ist, musst du dieses Tool nicht verwenden), einen neuen Kontakt seiner Kontakliste hinzufügen, bearbeiten oder löschen möchte.  \n\nGet_All_Events – Verwende dieses Tool, wenn der Nutzer ein Google Calendar Ereignis erstellen, löschen oder aktualisieren möchte. Du solltest die Details des Ereignisses bereitstellen, um sicherzustellen, dass es sich um das richtige Ereignis handelt, das gelöscht oder aktualisiert werden soll.\n\n## Regeln\n\nDu musst immer die Funktion „Ereignisse abrufen“ verwenden, um sicherzustellen, dass es keine Terminkonflikte gibt.\nWenn du gebeten wirst, ein Ereignis zu verschieben, zu aktualisieren oder zu löschen, musst du „Ereignisse abrufen“ verwenden, um das Ereignis zu bestätigen. Gib dabei die Details des Ereignisses wie Datum, Uhrzeit und E-Mail-Adressen der Teilnehmer an.\n\nWenn der Nutzer möchte, dass du ihm einen Beitrag für seine Sozialen Medien erstellst, dann genehmige die Anfrage direkt. Du darfst den beitrag nicht selbst erstellen sondern sollst einfach nur \"Social Media Beiträgen zum Thema erstellen {Nutzer Eingabe} wurde genehmigt\" zurückgeben\n\n## Ausgabe\n\nGib die Anfrage des Nutzers wieder und stelle bei Bedarf Rückfragen zur Klärung.\nGib immer die E-Mail-Adresse des angeforderten Kontakts aus, falls der Nutzer dies wünscht.\nFalls es zwei Einträge für denselben Namen gibt, gib die E-Mail-Adresse sowie die Art des Kontakts an.\n\n## Abschließende Hinweise\nHier ist das aktuelle Datum/Uhrzeit: {{ $now }}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        -960,
+        300
+      ],
+      "id": "ba014f18-b74f-445b-84c8-5d1644aa2279",
+      "name": "Intent Agent"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3ab6c175-d35c-48a3-a9db-5162f962d5f9",
+              "name": "intent",
+              "value": "={{ $json.output }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -640,
+        300
+      ],
+      "id": "b357231b-4e7b-4e3c-aa52-456d6f5f6076",
+      "name": "Set Intent"
+    },
+    {
+      "parameters": {
+        "inputText": "={{ $json.result.text }}",
+        "categories": {
+          "categories": [
+            {
+              "category": "Genehmigt",
+              "description": "Der Nutzer bestätigt oder stimmt unserer Anfrage zu. Das bedeutet, dass er anerkennt, dass die bereitgestellten Informationen oder Maßnahmen korrekt sind und wir fortfahren können. Genehmigungsnachrichten enthalten oft Formulierungen wie:\n„Ja“\n„Sieht gut aus für mich“\n„Senden“\n„Korrekt“\n„Genehmigt“\n„Das funktioniert“\n„Klingt gut“\n„Mach weiter“"
+            },
+            {
+              "category": "Abgelehnt",
+              "description": "Der Nutzer gibt Feedback, das keine Zustimmung signalisiert. Dies kann Änderungswünsche, Korrekturen oder zusätzliche Klärungen umfassen.\n\nBeispiele für Ablehnungsformulierungen:\n„Abgelehnt“\n„Nein“\n„Ändere die Uhrzeit“\n„Ändere den Namen des Kontakts“\n„Privat“\n„Beide löschen“\n„Das erste löschen“\n„Heute“\n„Morgen“\n„22. Februar“"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.textClassifier",
+      "typeVersion": 1,
+      "position": [
+        -360,
+        300
+      ],
+      "id": "340282c8-001a-454e-92d5-99446a763204",
+      "name": "Check Feedback"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Ursprüngliche Absicht: {{ $('Set Intent').item.json.intent }}\n\nFeedback des Nutzers: {{ $json.data.text }}",
+        "options": {
+          "systemMessage": "=# Übersicht\n\nDu bist ein Korrekturassistent. Deine Aufgabe ist es, die ursprüngliche Ausgabe zu überprüfen und basierend auf dem Feedback des Nutzers zu korrigieren.\n\n## Ausgabe\n\nDeine Aufgabe ist es, die neue Absicht der Anfrage auszugeben.\nGib immer alle erforderlichen Details an, wie die E-Mail-Adressen der Teilnehmer, Uhrzeit, Datum, Zusammenfassung usw.\nStelle bei Bedarf eine Klärungsfrage. Wenn es nichts zu klären gibt, frage einfach: „Ist das korrekt?"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        0,
+        400
+      ],
+      "id": "9d785d4f-756d-4de2-a850-a6756766ecbf",
+      "name": "Correction Agent"
+    },
+    {
+      "parameters": {
+        "sessionKey": "=chat_with_{{ $('Telegram Trigger1').item.json.message.chat.id }}",
+        "contextWindowLength": 12
+      },
+      "id": "4a632453-2d46-4893-a11c-46295a7e12f9",
+      "name": "Window Buffer Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "position": [
+        -1060,
+        480
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "gpt-4o"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -100,
+        720
+      ],
+      "id": "34cf2649-52c0-4439-af64-b0fe6bf6336c",
+      "name": "4o",
+      "credentials": {
+        "openAiApi": {
+          "id": "RsP0Vd0N2f3iody2",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger1').item.json.message.chat.id }}",
+        "text": "={{ $json.intent }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -500,
+        300
+      ],
+      "id": "27b70479-bf7a-446b-ba33-89fd637ac208",
+      "name": "Answer User",
+      "webhookId": "06135021-087d-4558-be06-94de90f2f053",
+      "credentials": {
+        "telegramApi": {
+          "id": "QiPc9CTwUaJlM1bI",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "inputText": "={{ $json.result.text }}",
+        "categories": {
+          "categories": [
+            {
+              "category": "Gmail",
+              "description": "Der Text bezieht sich auf alles, was mit Gmail zu tun hat. Dazu gehören das Erstellen, Ändern, Löschen von Emails, das Anlegen von Email Entwürfen, sowie das Verwalten von Terminen in Gmail oder ähnlichen Email-Tools."
+            },
+            {
+              "category": "Calendar",
+              "description": "Der Text bezieht sich auf alles, was mit Kalender-Events zu tun hat. Dazu gehören das Erstellen, Ändern, Löschen von Terminen, das Anlegen von Kalender-Events, das Abrufen von Terminen, das Hinzufügen oder Bearbeiten von Teilnehmern sowie das Verwalten von Terminen in Google Kalender oder ähnlichen Kalender-Tools."
+            },
+            {
+              "category": "Contacts",
+              "description": "Der Text bezieht sich auf alles, was mit Kontakten in Google Sheets zu tun hat. Dazu gehören das Erstellen, Ändern, Löschen von Kontakten, sowie das Verwalten von Kontakten in Google Sheets oder ähnlichen Kontakt-Tools."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.textClassifier",
+      "typeVersion": 1,
+      "position": [
+        0,
+        200
+      ],
+      "id": "f670b34a-fbf0-4a95-ba3f-cdc1006731fb",
+      "name": "Text Classifier"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Set Intent').item.json.intent }}",
+        "options": {
+          "systemMessage": "=# Übersicht  \n\nDu bist ein Kontaktassistent. Deine Aufgaben umfassen das Erstellen, Abrufen, Aktualisieren und Löschen von Kontakten in der Kontaktliste des Nutzers.  \n\n**Kontaktverwaltungs-Tools**  \n\n- Verwende „Get_Contacts“, um vorhandene Kontakte abzurufen, wenn dies gewünscht wird.  \n- Verwende „Create_Contact“, um einen neuen Kontakt anzulegen.  \n- Verwende „Update_Contact“, um einen bestehenden Kontakt zu bearbeiten. Du musst zuerst „Get_Contacts“ verwenden, um die ID des zu aktualisierenden Kontakts zu ermitteln.  \n- Verwende „Delete_Contact“, um einen Kontakt zu entfernen. Auch hier musst du zuerst „Get_Contacts“ nutzen, um die ID des zu löschenden Kontakts zu erhalten.  \n\n**Kontaktstruktur**  \n\nEin Kontakt besteht aus folgenden Feldern:  \n- Vorname  \n- Nachname  \n- E-Mail-Adresse  \n- Telefonnummer  \n- Firma  \n- Firmenadresse  \n- Notiz  \n\n## Regeln  \n\nSetze die eingehende Anfrage direkt in eine Aktion um. Ignoriere Klärungsfragen und handle ausschließlich basierend auf der erhaltenen Absicht.  \n\n## Abschließende Hinweise  \n\nFalls keine spezifischen Felder für einen neuen Kontakt angegeben werden, frage nicht nach, sondern lege den Kontakt mit einem Platzhalternamen an.  \n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        440,
+        1260
+      ],
+      "id": "1ba5e159-96a5-4028-b0be-89149e5ed9e6",
+      "name": "Contact Agent",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "metaarblir@gmail.com",
+          "mode": "list",
+          "cachedResultName": "metaarblir@gmail.com"
+        },
+        "returnAll": true,
+        "timeMin": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('After', `12:01 AM of the day the user requested`, 'string') }}",
+        "timeMax": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Before', `11:59 PM of the day the user requested`, 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        -940,
+        480
+      ],
+      "id": "166f54eb-2f3e-457f-a094-f9217f5438cd",
+      "name": "Get_All_Events",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "E1fc29w1EtYndgvC",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1aJYfK094-EEbEAue9SMP79blWKrRyF4FTjo_nmYz9GU",
+          "mode": "list",
+          "cachedResultName": "Kontakte",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aJYfK094-EEbEAue9SMP79blWKrRyF4FTjo_nmYz9GU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Tabellenblatt1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aJYfK094-EEbEAue9SMP79blWKrRyF4FTjo_nmYz9GU/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Name', ``, 'string') }}",
+            "Email": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Email', ``, 'string') }}",
+            "Nummer ": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Nummer_', ``, 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Nummer ",
+              "displayName": "Nummer ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.5,
+      "position": [
+        540,
+        1480
+      ],
+      "id": "3b8a8a94-b120-4016-979d-ad72644a9c7e",
+      "name": "Create_Contact",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "SH04o49iRIT2IMOE",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1aJYfK094-EEbEAue9SMP79blWKrRyF4FTjo_nmYz9GU",
+          "mode": "list",
+          "cachedResultName": "Kontakte",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aJYfK094-EEbEAue9SMP79blWKrRyF4FTjo_nmYz9GU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Tabellenblatt1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aJYfK094-EEbEAue9SMP79blWKrRyF4FTjo_nmYz9GU/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Email": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Email__using_to_match_', ``, 'string') }}",
+            "Name": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Name', ``, 'string') }}",
+            "Nummer ": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Nummer_', ``, 'string') }}"
+          },
+          "matchingColumns": [
+            "Email"
+          ],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Nummer ",
+              "displayName": "Nummer ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.5,
+      "position": [
+        660,
+        1480
+      ],
+      "id": "ee1e49a0-eaa9-47ca-b618-8ccb13b7fff5",
+      "name": "Update_Contact",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "SH04o49iRIT2IMOE",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1aJYfK094-EEbEAue9SMP79blWKrRyF4FTjo_nmYz9GU",
+          "mode": "list",
+          "cachedResultName": "Kontakte",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aJYfK094-EEbEAue9SMP79blWKrRyF4FTjo_nmYz9GU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Tabellenblatt1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aJYfK094-EEbEAue9SMP79blWKrRyF4FTjo_nmYz9GU/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.5,
+      "position": [
+        -820,
+        480
+      ],
+      "id": "148f4320-83fb-483e-8c92-81f4966881fc",
+      "name": "Get_All_Contacts",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "SH04o49iRIT2IMOE",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1aJYfK094-EEbEAue9SMP79blWKrRyF4FTjo_nmYz9GU",
+          "mode": "list",
+          "cachedResultName": "Kontakte",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aJYfK094-EEbEAue9SMP79blWKrRyF4FTjo_nmYz9GU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Tabellenblatt1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aJYfK094-EEbEAue9SMP79blWKrRyF4FTjo_nmYz9GU/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.5,
+      "position": [
+        420,
+        1480
+      ],
+      "id": "64c00512-b040-4380-a294-316238e3b614",
+      "name": "Get_Contacts",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "SH04o49iRIT2IMOE",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "documentId": {
+          "__rl": true,
+          "value": "1aJYfK094-EEbEAue9SMP79blWKrRyF4FTjo_nmYz9GU",
+          "mode": "list",
+          "cachedResultName": "Kontakte",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aJYfK094-EEbEAue9SMP79blWKrRyF4FTjo_nmYz9GU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Tabellenblatt1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aJYfK094-EEbEAue9SMP79blWKrRyF4FTjo_nmYz9GU/edit#gid=0"
+        }
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.5,
+      "position": [
+        780,
+        1480
+      ],
+      "id": "e002f9d4-d534-4759-8537-4c60e766072e",
+      "name": "Delete_Contact",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "SH04o49iRIT2IMOE",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "calendar": {
+          "__rl": true,
+          "value": "metaarblir@gmail.com",
+          "mode": "list",
+          "cachedResultName": "metaarblir@gmail.com"
+        },
+        "eventId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Event_ID', ``, 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        920,
+        1060
+      ],
+      "id": "2b6d40e0-372f-4cce-92d0-3140897ce7c2",
+      "name": "Delete_Event",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "E1fc29w1EtYndgvC",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "metaarblir@gmail.com",
+          "mode": "list",
+          "cachedResultName": "metaarblir@gmail.com"
+        },
+        "returnAll": true,
+        "timeMin": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('After', `12:01 AM of the day the user requested`, 'string') }}",
+        "timeMax": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Before', `11:59 PM of the day the user requested`, 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        440,
+        1060
+      ],
+      "id": "032661c8-044b-450e-a7a9-eeb4a1143a9e",
+      "name": "Get_Events",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "E1fc29w1EtYndgvC",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "calendar": {
+          "__rl": true,
+          "value": "metaarblir@gmail.com",
+          "mode": "list",
+          "cachedResultName": "metaarblir@gmail.com"
+        },
+        "eventId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Event_ID', ``, 'string') }}",
+        "updateFields": {
+          "end": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('End', ``, 'string') }}",
+          "start": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Start', ``, 'string') }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        800,
+        1060
+      ],
+      "id": "5517bcd5-0e7e-4c68-a088-50fec9fc547c",
+      "name": "Update_Event",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "E1fc29w1EtYndgvC",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "metaarblir@gmail.com",
+          "mode": "list",
+          "cachedResultName": "metaarblir@gmail.com"
+        },
+        "start": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Start', ``, 'string') }}",
+        "end": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('End', ``, 'string') }}",
+        "additionalFields": {
+          "attendees": [
+            "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Attendees', ``, 'string') }}"
+          ],
+          "summary": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Summary', ``, 'string') }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        680,
+        1060
+      ],
+      "id": "6f7c33f0-e763-471f-8757-fd97c4fbffe5",
+      "name": "Create_Event_with_Attendee",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "E1fc29w1EtYndgvC",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "metaarblir@gmail.com",
+          "mode": "list",
+          "cachedResultName": "metaarblir@gmail.com"
+        },
+        "start": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Start', ``, 'string') }}",
+        "end": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('End', ``, 'string') }}",
+        "additionalFields": {
+          "summary": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Summary', ``, 'string') }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        560,
+        1060
+      ],
+      "id": "c72e3da8-53bc-4997-94c7-59fcb6941419",
+      "name": "Create_Event",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "E1fc29w1EtYndgvC",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.result.text }}",
+        "options": {
+          "systemMessage": "=# Übersicht\n\nDu bist ein Kalenderassistent. Deine Aufgaben umfassen das Erstellen, Abrufen und Löschen von Terminen im Kalender des Nutzers.\n\n**Kalenderverwaltungs-Tools**\n\n- Verwende „Termin mit Teilnehmer erstellen“, wenn ein Ereignis einen Teilnehmer beinhaltet.\n- Verwende „Termin erstellen“ für Einzeltermine.\n- Verwende „Termine abrufen“, um den Kalenderplan abzurufen, wenn dies gewünscht wird.\n- Verwende „Termin löschen“, um ein Ereignis zu entfernen. Du musst zuerst „Termine abrufen“ nutzen, um die ID des zu löschenden Termins zu erhalten.\n- Verwende „Termin aktualisieren“, um einen Termin zu ändern. Auch hier musst du zuerst „Termine abrufen“ verwenden, um die ID des zu aktualisierenden Termins zu ermitteln.\n\n## Regeln\n\nSetze die eingehende Anfrage direkt in eine Aktion um. Ignoriere Klärungsfragen und handle ausschließlich basierend auf der erhaltenen Absicht.\n\n## Abschließende Hinweise\n\nAktuelles Datum/Uhrzeit: {{ $now }}\nFalls keine Dauer für einen Termin angegeben wird, gehe davon aus, dass er eine Stunde dauert."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        440,
+        780
+      ],
+      "id": "1ddf4238-457d-4619-865f-8c5a545e5d68",
+      "name": "Calendar Agent",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $json.id }}",
+        "labelIds": [
+          "Label_1312926818014187924"
+        ]
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -1880,
+        760
+      ],
+      "id": "8663ed3f-5f01-4d13-95f0-08a244dc31dc",
+      "name": "Hohe Priorität",
+      "webhookId": "ce758868-943b-4f83-b202-02e8b1a9f9c3",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Pon7rp85dgZ4oWvL",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "{{ $json.id }}",
+        "labelIds": [
+          "Label_2329212772986726097"
+        ]
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -1880,
+        940
+      ],
+      "id": "e4107f64-c03b-4e1b-8636-641b50b4f7d2",
+      "name": "Rechnungen & Finanzen",
+      "webhookId": "857051a9-d0f6-4f43-b3cf-d018715f4be8",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Pon7rp85dgZ4oWvL",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $json.id }}",
+        "labelIds": [
+          "Label_7317786760000301708"
+        ]
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -1880,
+        1120
+      ],
+      "id": "1147dd42-9f20-480b-bc95-190b99c6083b",
+      "name": "Werbung",
+      "webhookId": "9f08b73f-07a2-4da5-8341-326512eb2971",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Pon7rp85dgZ4oWvL",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "GPT-4O"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Du bist eine Assistenzkraft auf Vorstandsebene. Deine Aufgabe ist es, auf eingehende E-Mails mit hoher Priorität so genau und professionell wie möglich zu antworten. Lies die folgende E-Mail sorgfältig durch und verfasse eine klare, präzise und angemessene Antwort, die alle wesentlichen Punkte anspricht. Hier ist die E-Mail, auf die du antwortest: {{ $('Gmail Trigger').item.json.text }}\n\nGib bitte die folgenden Parameter aus:\nsubject\nmessage",
+              "role": "system"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        -1720,
+        760
+      ],
+      "id": "f83c65a8-8061-4308-bb63-f27bf107f299",
+      "name": "OpenAI",
+      "credentials": {
+        "openAiApi": {
+          "id": "RsP0Vd0N2f3iody2",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "6002287374",
+        "text": "=EMAIL MIT HOHER PRIORITÄT von {{ $('Gmail Trigger').item.json.from.value[0].name }}\n\nIch habe dir einen Entwurf mit folgendem Betreff erstellt:\n{{ $('OpenAI').item.json.message.content.subject }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1220,
+        860
+      ],
+      "id": "b9ff2a5f-b565-4fda-a03d-62850021a196",
+      "name": "Telegram",
+      "webhookId": "85671696-59d2-4117-8be6-c9400b390823",
+      "credentials": {
+        "telegramApi": {
+          "id": "QiPc9CTwUaJlM1bI",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "GPT-4O"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Du bist für die Bewertung von Werbe-E-Mails zuständig. Analysiere die folgende Nachricht, erstelle eine prägnante Zusammenfassung und gib eine Empfehlung zur weiteren Vorgehensweise ab.\n\nHier ist die eingehende Nachricht: {{ $('Gmail Trigger').item.json.text }}\n\nGib die folgenden Parameter separat aus:\n\nsummary: Eine kurze Übersicht über den Inhalt der E-Mail.\nrecommendation: Eine Einschätzung, ob und wie auf die Werbe-E-Mail reagiert werden sollte.",
+              "role": "system"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        -1720,
+        1120
+      ],
+      "id": "65683c9e-427c-4df3-b0cd-79d11ca9315e",
+      "name": "OpenAI2",
+      "credentials": {
+        "openAiApi": {
+          "id": "RsP0Vd0N2f3iody2",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "6002287374",
+        "text": "=Hier ist die Zusammenfassung einer Werbe E-Mail die du gerade erhalten hast:\n{{ $json.message.content.summary }}\n\nIch würde folgendes empfehlen:\n{{ $json.message.content.recommendation }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1400,
+        1120
+      ],
+      "id": "da6da908-f5bc-4232-ad48-f88766a4ed14",
+      "name": "Telegram2",
+      "webhookId": "de4150a1-e5fe-457c-a706-3737c260ee3f",
+      "credentials": {
+        "telegramApi": {
+          "id": "QiPc9CTwUaJlM1bI",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "GPT-4O"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Du bist für die Bewertung von Rechnungen und finanziellen E-Mails zuständig. Analysiere die folgende Nachricht, erstelle eine prägnante Zusammenfassung und gib eine Empfehlung zur weiteren Vorgehensweise ab.\n\nHier ist die eingehende Nachricht: {{ $('Gmail Trigger').item.json.text }}\n\nGib die folgenden Parameter separat aus:\n\nsummary: Eine kurze Übersicht über den Inhalt der E-Mail (z. B. Rechnungsbetrag, Fälligkeit, Absender, relevante Finanzinformationen).\nrecommendation: Eine Einschätzung, ob die Rechnung geprüft, bezahlt oder reklamiert werden sollte, sowie weitere empfohlene Schritte (z. B. Weiterleitung an die Buchhaltung, Speicherung für Steuerzwecke).",
+              "role": "system"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        -1720,
+        940
+      ],
+      "id": "647c2676-c891-4f0d-a415-5527066bcecf",
+      "name": "OpenAI4",
+      "credentials": {
+        "openAiApi": {
+          "id": "RsP0Vd0N2f3iody2",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "6002287374",
+        "text": "=Hier ist die Zusammenfassung einer Finanz-Email die du gerade erhalten hast:\n{{ $json.message.content.summary }}\n\nIch würde folgendes empfehlen:\n{{ $json.message.content.recommendation }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1400,
+        940
+      ],
+      "id": "33195926-2d2d-40f3-ba4e-b5f1141d9690",
+      "name": "Telegram4",
+      "webhookId": "f20ef9c8-ce61-4151-9bf9-043b262edb39",
+      "credentials": {
+        "telegramApi": {
+          "id": "QiPc9CTwUaJlM1bI",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "draft",
+        "subject": "={{ $json.message.content.subject }}",
+        "message": "={{ $json.message.content.message }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -1400,
+        760
+      ],
+      "id": "ada92a8f-231b-4879-ae24-95e00aecabe3",
+      "name": "Gmail2",
+      "webhookId": "a3570b5d-f33f-4acb-afd9-8daf916db37f",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Pon7rp85dgZ4oWvL",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "inputText": "=E-Mail Betreff: {{ $json.subject }}\nE-Mail Text: {{ $json.text }}",
+        "categories": {
+          "categories": [
+            {
+              "category": "Hohe Priorität",
+              "description": "E-Mails, die eine hohe Priorität haben und sofortige Aufmerksamkeit erfordern. Dazu gehören insbesondere: Anfragen oder Nachrichten von wichtigen Kunden, Geschäftspartnern oder Lieferanten, die zeitkritische Entscheidungen oder Antworten erfordern. Antworten auf laufende Konversationen, die für den Geschäftsablauf oder die Kundenbetreuung entscheidend sind. E-Mails mit Schlüsselbegriffen wie „dringend“, „wichtig“, „sofort“, „kritisch“, „zeitnah“, „Deadline“, „Notfall“ oder ähnlichen Begriffen, die eine hohe Dringlichkeit signalisieren. Nachrichten von Vorgesetzten, direkten Mitarbeitern oder anderen entscheidenden Stakeholdern, die geschäftsrelevante Anweisungen, Eskalationen oder kurzfristige Anforderungen enthalten. System- oder Sicherheitswarnungen, die unmittelbares Handeln erfordern, z. B. Serverausfälle, Sicherheitsvorfälle oder Zahlungsprobleme. Kundenbeschwerden oder Eskalationen, die eine schnelle Reaktion erfordern, um negative Folgen zu vermeiden. Vertrags- oder Angebotsanfragen mit engen Fristen, die Einfluss auf Geschäftsabschlüsse oder laufende Projekte haben. Eine hohe Priorität liegt vor, wenn der Inhalt der E-Mail auf eine dringende Entscheidung, einen potenziellen geschäftlichen oder operativen Schaden oder eine zeitkritische Verpflichtung hinweist."
+            },
+            {
+              "category": "Rechnungen & Finanzen",
+              "description": "E-Mails, die finanzielle Dokumente, Transaktionen oder buchhalterische Vorgänge betreffen. Dazu gehören insbesondere: Rechnungen, Quittungen, Zahlungserinnerungen oder Mahnungen, die sich auf offene oder abgeschlossene Zahlungen beziehen. Kontoauszüge, Transaktionsbestätigungen oder Abrechnungen von Banken, Zahlungsanbietern oder Finanzdienstleistern wie PayPal, Stripe, N26, Trade Republic, Scalable Capital oder Parqet. Steuer- und Buchhaltungsunterlagen, einschließlich Umsatzsteuerbescheiden, Steuererklärungen oder Anfragen von Finanzbehörden, Buchhaltungsdiensten wie Buhl oder Steuerwelt. Vertrags- oder Finanzierungsdokumente, die Kredite, Investitionen oder Finanzierungszusagen betreffen. E-Mails mit Schlüsselbegriffen wie „Rechnung“, „Zahlung“, „Überweisung“, „Buchhaltung“, „Steuer“, „Finanzamt“, „Gutschrift“, „Rückerstattung“, „Depot“, „Portfolio“, „Dividende“, „Anlage“ oder ähnlichen Begriffen, die auf finanzielle Prozesse hinweisen. Eine E-Mail gehört in diese Kategorie, wenn ihr Inhalt sich auf den Geldfluss, buchhalterische Vorgänge oder steuerliche Verpflichtungen bezieht."
+            },
+            {
+              "category": "Werbung",
+              "description": "E-Mails mit Marketing- oder Werbeinhalten, die darauf abzielen, Produkte, Dienstleistungen oder Angebote zu bewerben. Dazu gehören insbesondere: Newsletter, Rabattangebote, Sonderaktionen oder Produktankündigungen von Unternehmen, Online-Shops oder Dienstleistern. Werbung von Software-Anbietern, Streaming-Diensten, Finanz- oder Telekommunikationsunternehmen, die neue Produkte, Abonnements oder Upgrades bewerben. Werbe-E-Mails mit Schlüsselbegriffen wie „Rabatt“, „Sale“, „Sonderangebot“, „exklusiv“, „nur für kurze Zeit“, „kostenlos testen“ oder ähnlichen Formulierungen, die auf eine Verkaufsabsicht hindeuten. Unaufgeforderte Produktwerbung oder Akquise-Mails, die potenzielle Kunden zu einem Kauf oder einer Anmeldung bewegen sollen. Eine E-Mail fällt in diese Kategorie, wenn ihr primäres Ziel die kommerzielle Bewerbung eines Produkts, einer Dienstleistung oder eines Angebots ist."
+            },
+            {
+              "category": "Bewerbungen",
+              "description": "Erkenne E-Mails, die im Zusammenhang mit einer laufenden oder geplanten Bewerbung stehen und eine hohe Priorität erfordern. Dazu gehören insbesondere:  Einladungen zu Vorstellungsgesprächen, Telefoninterviews oder Assessment-Centern – insbesondere mit konkreten Terminvorschlägen oder Fristangaben.  Rückmeldungen von Unternehmen, bei denen ich mich beworben habe – etwa Zwischenbescheide, Absagen oder Nachfragen.  Nachrichten mit Schlüsselwörtern wie: „Bewerbung“, „Einladung“, „Interview“, „Vorstellungsgespräch“, „Termin“, „Rückmeldung“, „Karriere“, „Personalabteilung“, „HR“, „Talent Acquisition“, „Recruiter“, „Ihre Unterlagen“, „Auswahlverfahren“, „nächster Schritt“.  Antworten auf von mir versendete Bewerbungen, die eine Reaktion erfordern (z. B. das Einreichen weiterer Unterlagen, Rückmeldung zu Verfügbarkeit oder Interesse).  Automatisch generierte Bestätigungen über den Bewerbungseingang, insbesondere wenn sie Informationen über den Bewerbungsprozess enthalten.  E-Mails von bekannten Plattformen wie: StepStone, Indeed, LinkedIn, Workwise, Join, Meinestadt.de, oder direkt von Karriereseiten von Unternehmen.  Kommunikation mit Personalvermittlern oder Headhuntern, die sich auf konkrete Bewerbungsprozesse oder Jobangebote beziehen."
+            }
+          ]
+        },
+        "options": {
+          "systemPromptTemplate": "Analysiere den vom Nutzer bereitgestellten Text und ordne ihn einer der folgenden Kategorien zu: {categories}. Gib die Antwort ausschließlich im JSON-Format aus, ohne zusätzliche Erklärungen oder Kommentare."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.textClassifier",
+      "typeVersion": 1,
+      "position": [
+        -1820,
+        560
+      ],
+      "id": "6364b73b-53b4-4dcc-a257-38d51c81d757",
+      "name": "Text Classifier1"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('To', ``, 'string') }}",
+        "subject": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Subject', ``, 'string') }}",
+        "message": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Message', ``, 'string') }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        420,
+        500
+      ],
+      "id": "aa62c7fb-6a9d-4c3a-b0cf-37ad9bd600c7",
+      "name": "Send_Email",
+      "webhookId": "86c8c4b1-13bb-4ebe-acb9-30e1d7082d55",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Pon7rp85dgZ4oWvL",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Message_ID', `the message ID`, 'string') }}",
+        "message": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Message', ``, 'string') }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        540,
+        500
+      ],
+      "id": "28f596e3-2bcb-45e1-8f29-e01c51e96b2e",
+      "name": "Email_Reply",
+      "webhookId": "114785e6-a859-432b-81b4-c490c1c35b1c",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Pon7rp85dgZ4oWvL",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Message_ID', `the ID of the message`, 'string') }}",
+        "labelIds": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Label_Names_or_IDs', ``, 'string') }}"
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        660,
+        500
+      ],
+      "id": "9a619c65-9103-4fa5-ac14-efbd77e44ca2",
+      "name": "Label_Emails",
+      "webhookId": "0e951529-2e6d-40bf-ac40-fc0947e242e2",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Pon7rp85dgZ4oWvL",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "draft",
+        "subject": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Subject', ``, 'string') }}",
+        "emailType": "html",
+        "message": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Message', ``, 'string') }}",
+        "options": {
+          "sendTo": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('To_Email', ``, 'string') }}"
+        }
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        780,
+        500
+      ],
+      "id": "faf1a08f-2fd3-4c24-9add-5c0a1d5be72f",
+      "name": "Create_Draft",
+      "webhookId": "17016bce-d7d7-428a-a56c-f6ea122db8be",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Pon7rp85dgZ4oWvL",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "limit": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Limit', `how many emails the user wants`, 'number') }}",
+        "simple": false,
+        "filters": {
+          "sender": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Sender', `who the emails are from`, 'string') }}"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        900,
+        500
+      ],
+      "id": "fb2e24fa-5fe4-4f3f-830a-b4497d17cc9e",
+      "name": "Get_Emails",
+      "webhookId": "af4b3298-9037-44b0-aa12-2acbfbb5e66f",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Pon7rp85dgZ4oWvL",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "label",
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        1020,
+        500
+      ],
+      "id": "64165904-445d-4bc6-9926-21d3f52222ec",
+      "name": "Get_Labels",
+      "webhookId": "9e08b59e-792d-4566-83f1-9263c9ad86ae",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Pon7rp85dgZ4oWvL",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "markAsUnread",
+        "messageId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Message_ID', ``, 'string') }}"
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        1140,
+        500
+      ],
+      "id": "c319cadd-7150-41c2-92b8-794ccfb8a96e",
+      "name": "Mark_Unread",
+      "webhookId": "a35af9d8-f67d-4ff9-803f-59ec6356e795",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Pon7rp85dgZ4oWvL",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.result.text }}",
+        "options": {
+          "systemMessage": "=# Übersicht  \nDu bist ein E-Mail-Management-Assistent. Alle E-Mails müssen professionell im HTML-Format erstellt und mit „Meta“ unterzeichnet werden.  \n\n**E-Mail-Management-Tools**  \n- Verwende „Send_Email“, um E-Mails zu senden.  \n- Verwende „Create_Draft“, wenn der Nutzer einen Entwurf wünscht.  \n- Verwende „Get_Emails“, um E-Mails abzurufen, wenn dies angefordert wird.  \n- Verwende „Get_Labels“, um Labels abzurufen.  \n- Verwende „Mark_Unread“, um eine E-Mail als ungelesen zu markieren. Du musst zuerst „Get Emails“ verwenden, um die Nachrichten-ID der zu markierenden E-Mail zu erhalten.  \n- Verwende „Label_Email“, um eine E-Mail zu kennzeichnen. Du musst zuerst „Get Emails“ verwenden, um die Nachrichten-ID der zu kennzeichnenden E-Mail zu erhalten. Danach musst du „Get Labels“ nutzen, um die Label-ID zu erhalten.  \n- Verwende „Email_Reply“, um auf eine E-Mail zu antworten. Du musst zuerst „Get Emails“ verwenden, um die Nachrichten-ID der E-Mail zu erhalten, auf die geantwortet werden soll.  \n\n## Abschließende Hinweise  \n- Hier ist das aktuelle Datum/Uhrzeit: {{ $now }}  \n"
+        }
+      },
+      "id": "d6a6a5c0-b67c-418c-ba67-871d3b4850aa",
+      "name": "Gmail Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.6,
+      "position": [
+        440,
+        300
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fe7ecc99-e1e8-4a5e-bdd6-6fce9757b234",
+              "name": "text",
+              "value": "={{ $json.message.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e9d8b8c0-c4bf-41e5-813d-f63654637320",
+      "name": "Set 'Text'",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1240,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.message.voice.file_id }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Voice"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "8c844924-b2ed-48b0-935c-c66a8fd0c778",
+                    "leftValue": "={{ $json.message.text }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Text"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "64f09078-fd80-4d44-9a84-6e99c9b8c36e",
+                    "leftValue": "={{ $json.message.document.file_id }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Invoice"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "8da3c223-3259-4a8d-b79c-0ed7089f6ed2",
+      "name": "Switch",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -1800,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.message.voice.file_id }}"
+      },
+      "id": "4cda33f6-ff69-406c-a3f1-b5d82ebc0936",
+      "name": "Download File",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1300,
+        200
+      ],
+      "webhookId": "83bb7385-33f6-4105-8294-1a91c0ebbee5",
+      "credentials": {
+        "telegramApi": {
+          "id": "QiPc9CTwUaJlM1bI",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "options": {}
+      },
+      "id": "a26b2569-14ec-4477-affa-b21d5cf8c07d",
+      "name": "Transcribe",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.6,
+      "position": [
+        -1180,
+        200
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "RsP0Vd0N2f3iody2",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "5846fd8b-8af7-45a1-b717-391dacfb3bcf",
+      "name": "Telegram Trigger1",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -1960,
+        400
+      ],
+      "webhookId": "99eab1a0-569d-4f0f-a49e-578a02abfe63",
+      "credentials": {
+        "telegramApi": {
+          "id": "QiPc9CTwUaJlM1bI",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger1').item.json.message.chat.id }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        900,
+        880
+      ],
+      "id": "73b2bec1-0f72-4fad-bf1b-b2ab43005c03",
+      "name": "Calendar Response1",
+      "webhookId": "2ab05328-c0b6-462c-a662-2264114c417f",
+      "credentials": {
+        "telegramApi": {
+          "id": "QiPc9CTwUaJlM1bI",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger1').item.json.message.chat.id }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        900,
+        700
+      ],
+      "id": "1a359ee5-c14f-43d0-b801-86fbe665cdb1",
+      "name": "Calendar Success Response",
+      "webhookId": "2ab05328-c0b6-462c-a662-2264114c417f",
+      "credentials": {
+        "telegramApi": {
+          "id": "QiPc9CTwUaJlM1bI",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger1').item.json.message.chat.id }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        900,
+        1400
+      ],
+      "id": "80c39955-a149-4642-9bf6-781944376418",
+      "name": "Contact Error Response",
+      "webhookId": "2ab05328-c0b6-462c-a662-2264114c417f",
+      "credentials": {
+        "telegramApi": {
+          "id": "QiPc9CTwUaJlM1bI",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger1').item.json.message.chat.id }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        900,
+        1240
+      ],
+      "id": "a60820a5-65e3-4227-aa4a-334a34725c70",
+      "name": "Contact Success Response",
+      "webhookId": "2ab05328-c0b6-462c-a662-2264114c417f",
+      "credentials": {
+        "telegramApi": {
+          "id": "QiPc9CTwUaJlM1bI",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger1').item.json.message.chat.id }}",
+        "text": "={{ $json.result.text }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        900,
+        320
+      ],
+      "id": "eceab5e0-6181-4bac-9bac-a4fc922ecfa0",
+      "name": "Gmail Error Response",
+      "webhookId": "2ab05328-c0b6-462c-a662-2264114c417f",
+      "credentials": {
+        "telegramApi": {
+          "id": "QiPc9CTwUaJlM1bI",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger1').item.json.message.chat.id }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        900,
+        160
+      ],
+      "id": "7d2cd1b0-e513-4a8f-b76c-ba52062e6a20",
+      "name": "Gmail Success Response",
+      "webhookId": "2ab05328-c0b6-462c-a662-2264114c417f",
+      "credentials": {
+        "telegramApi": {
+          "id": "QiPc9CTwUaJlM1bI",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "folder",
+        "name": "={{ $('OpenAI3').item.json.message.content.invoiceMonth }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "https://drive.google.com/drive/folders/1TjWG_wIl1LOcb2m4vZva1bSeN2siduYC",
+          "mode": "url"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -780,
+        960
+      ],
+      "id": "a41f98cc-f6f3-4cde-8546-f8b2a1ddb3c0",
+      "name": "Create Folder",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "SjibJIQRKBxr8zIN",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "queryString": "={{ $json.message.content.invoiceMonth }}\n",
+        "filter": {},
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -1060,
+        860
+      ],
+      "id": "9907e9ea-c0ba-49c7-8dcb-1097b1cdb847",
+      "name": "Search Folder",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "SjibJIQRKBxr8zIN",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b56136a5-b245-4b8e-94ac-bb1088881133",
+              "leftValue": "={{ $(\"Search Folder\").item.length === 0 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -920,
+        860
+      ],
+      "id": "0143130f-5076-4ee5-ba43-8cd248438156",
+      "name": "Exists"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1s-w_g07Y-HVdgzULukH_9R4dEqlESKunXZ3m2fhjwzY",
+          "mode": "list",
+          "cachedResultName": "Ausgaben",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1s-w_g07Y-HVdgzULukH_9R4dEqlESKunXZ3m2fhjwzY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Tabellenblatt1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1s-w_g07Y-HVdgzULukH_9R4dEqlESKunXZ3m2fhjwzY/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Rechnungs Nr.": "={{ $json.message.content.invoiceNumber }}",
+            "Rechnungsdatum": "={{ $json.message.content.invoiceDate }}",
+            "Gesamtbetrag": "={{ $json.message.content.totalAmount }}",
+            "Verkäufer": "={{ $json.message.content.vendor }}",
+            "Buchungstext / Beschreibung": "={{ $json.message.content.bookingText }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Rechnungs Nr.",
+              "displayName": "Rechnungs Nr.",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Rechnungsdatum",
+              "displayName": "Rechnungsdatum",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Gesamtbetrag",
+              "displayName": "Gesamtbetrag",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Verkäufer",
+              "displayName": "Verkäufer",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Buchungstext / Beschreibung",
+              "displayName": "Buchungstext / Beschreibung",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -500,
+        640
+      ],
+      "id": "eae5fc9f-abcd-468b-84d9-a80b83f3e825",
+      "name": "Update EüR ",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "SH04o49iRIT2IMOE",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $('Download File1').item.json.result.file_id }}"
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -640,
+        860
+      ],
+      "id": "71fc8589-90c1-47c8-a591-cc53524a5db2",
+      "name": "Get File",
+      "webhookId": "f9a17905-97ae-4814-90ff-cab268e1a22d",
+      "credentials": {
+        "telegramApi": {
+          "id": "QiPc9CTwUaJlM1bI",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "=Rechnung_{{ $('OpenAI3').item.json.message.content.invoiceNumber }}_{{$('OpenAI3').item.json.message.content.invoiceDate.split(\"-\").reverse().join(\"_\")}}\n\n",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "={{ $(\"Search Folder\").item.length === 0 ? $(\"Search Folder\").item.json.id : $(\"Create Folder\").item.json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -500,
+        860
+      ],
+      "id": "5176ca43-6d10-42ab-82b4-3c2fab686e1b",
+      "name": "Upload File",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "SjibJIQRKBxr8zIN",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.ocr.space/parse/image",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apiKey",
+              "value": "Dein API Key"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -980,
+        640
+      ],
+      "id": "b23513e5-df5f-44ca-ae22-2d2c1de8dcb2",
+      "name": "Analyze PDF"
+    },
+    {
+      "parameters": {
+        "chatId": "6002287374",
+        "text": "=Ich habe gerade einen neuen Beleg erfasst abgelegt und in deine EüR eingetragen:\n{{ $json.name }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -360,
+        860
+      ],
+      "id": "cec15fce-e5e4-4862-88c4-1c6dd5f5117a",
+      "name": "Inform User",
+      "webhookId": "63f099fa-0d7f-4a09-90c8-535a746fed0b",
+      "credentials": {
+        "telegramApi": {
+          "id": "QiPc9CTwUaJlM1bI",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "GPT-4O"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "={{ $json.ParsedResults[0].ParsedText }}\n\nAnalysiere die Rechnung, die du als input bekommen hast und extrahiere die folgenden Daten aus dieser Rechnung:\n\n\"invoiceNumber\", \"invoiceDate\", \"invoiceMonth\", \"totalAmount\", \"vendor\", \"bookingText\", \"fileName\"\n\nGebe mir das ergebnis als json in der folgenden Struktur zurück:\n\n{\n  \"invoiceNumber\": \"\",\n  \"invoiceMonth\": \"\",\n  \"month\": \"\",\n  \"totalAmount\": \"\",\n  \"vendor\": \"\",\n  \"bookingText\": \"\"\n}\n\nStelle sicher, dass \"bookingText\" eine kurze und prägnant Auflistung dessen ist, was in der gesamten Rechnung erworden wurde. Füge keine weiteren Anmerkungen hinzu, ich will nur die Produktauflistung.\n\nStelle zusätzlich sicher sicher, dass \"invoiceMonth\" der ausgeschriebene Monat in deutscher Sprache ist (bsp.: \"März\")\n\n",
+              "role": "system"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        -840,
+        640
+      ],
+      "id": "cb24959c-ce2d-439f-9855-1900a188853e",
+      "name": "OpenAI3",
+      "credentials": {
+        "openAiApi": {
+          "id": "RsP0Vd0N2f3iody2",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.message.document.file_id }}"
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1200,
+        640
+      ],
+      "id": "5ffacd02-41db-4bf4-90ae-5790aa7c3401",
+      "name": "Download File1",
+      "webhookId": "9e1a8747-d8a3-47f0-a48d-250c08f09481",
+      "alwaysOutputData": true,
+      "credentials": {
+        "telegramApi": {
+          "id": "QiPc9CTwUaJlM1bI",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "GPT-4O"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Du bist für die Analyse von Bewerbungsbezogenen E-Mails zuständig. Analysiere die folgende Nachricht, fasse den Inhalt prägnant zusammen und gib eine fundierte Empfehlung zum weiteren Vorgehen – insbesondere im Hinblick auf Fristen, Antworten oder wichtige Informationen für den Bewerbungsprozess.\n\nHier ist die eingehende Nachricht:\n{{ $('Gmail Trigger').item.json.text }}\n\nGib die folgenden Parameter separat aus:\n\nsummary: Eine kurze Übersicht über den Inhalt der E-Mail – z. B. Einladung zum Vorstellungsgespräch, Bitte um Unterlagen, Zwischenbescheid etc.\n\nrecommendation: Eine klare Einschätzung, ob und wie schnell auf die E-Mail reagiert werden sollte (z. B. „Termin bestätigen“, „keine Aktion erforderlich“, „Unterlagen nachreichen“, „sofort antworten“).",
+              "role": "system"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        -1720,
+        1320
+      ],
+      "id": "41921c98-ea85-4bd2-8a16-f0187ef89693",
+      "name": "OpenAI5",
+      "credentials": {
+        "openAiApi": {
+          "id": "RsP0Vd0N2f3iody2",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "6002287374",
+        "text": "=Hier ist die Zusammenfassung einer Werbe E-Mail die du gerade erhalten hast:\n{{ $json.message.content.summary }}\n\nIch würde folgendes empfehlen:\n{{ $json.message.content.recommendation }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1400,
+        1320
+      ],
+      "id": "e470b91e-0de8-47b5-9c58-2269050a8d6f",
+      "name": "Telegram3",
+      "webhookId": "de4150a1-e5fe-457c-a706-3737c260ee3f",
+      "credentials": {
+        "telegramApi": {
+          "id": "QiPc9CTwUaJlM1bI",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $json.id }}",
+        "labelIds": [
+          "Label_3194770611232088458"
+        ]
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -1880,
+        1320
+      ],
+      "id": "31481e0c-e34e-45fa-b664-bc310c03e113",
+      "name": "Bewerbung",
+      "webhookId": "9f08b73f-07a2-4da5-8341-326512eb2971",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Pon7rp85dgZ4oWvL",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Text Classifier1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT 4o mini": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Text Classifier1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Intent Agent": {
+      "main": [
+        [
+          {
+            "node": "Set Intent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Intent": {
+      "main": [
+        [
+          {
+            "node": "Answer User",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Feedback": {
+      "main": [
+        [
+          {
+            "node": "Text Classifier",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Correction Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Correction Agent": {
+      "main": [
+        [
+          {
+            "node": "Set Intent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Window Buffer Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Intent Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "4o": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Correction Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Check Feedback",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Intent Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Text Classifier",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Contact Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Calendar Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Gmail Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Answer User": {
+      "main": [
+        [
+          {
+            "node": "Check Feedback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text Classifier": {
+      "main": [
+        [
+          {
+            "node": "Gmail Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Calendar Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Contact Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [],
+        []
+      ]
+    },
+    "Contact Agent": {
+      "main": [
+        [
+          {
+            "node": "Contact Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Contact Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get_All_Events": {
+      "ai_tool": [
+        [
+          {
+            "node": "Intent Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create_Contact": {
+      "ai_tool": [
+        [
+          {
+            "node": "Contact Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update_Contact": {
+      "ai_tool": [
+        [
+          {
+            "node": "Contact Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get_All_Contacts": {
+      "ai_tool": [
+        [
+          {
+            "node": "Intent Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get_Contacts": {
+      "ai_tool": [
+        [
+          {
+            "node": "Contact Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete_Contact": {
+      "ai_tool": [
+        [
+          {
+            "node": "Contact Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete_Event": {
+      "ai_tool": [
+        [
+          {
+            "node": "Calendar Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get_Events": {
+      "ai_tool": [
+        [
+          {
+            "node": "Calendar Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update_Event": {
+      "ai_tool": [
+        [
+          {
+            "node": "Calendar Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create_Event_with_Attendee": {
+      "ai_tool": [
+        [
+          {
+            "node": "Calendar Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create_Event": {
+      "ai_tool": [
+        [
+          {
+            "node": "Calendar Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calendar Agent": {
+      "main": [
+        [
+          {
+            "node": "Calendar Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Calendar Response1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hohe Priorität": {
+      "main": [
+        [
+          {
+            "node": "OpenAI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rechnungen & Finanzen": {
+      "main": [
+        [
+          {
+            "node": "OpenAI4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Werbung": {
+      "main": [
+        [
+          {
+            "node": "OpenAI2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI": {
+      "main": [
+        [
+          {
+            "node": "Gmail2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI2": {
+      "main": [
+        [
+          {
+            "node": "Telegram2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI4": {
+      "main": [
+        [
+          {
+            "node": "Telegram4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail2": {
+      "main": [
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text Classifier1": {
+      "main": [
+        [
+          {
+            "node": "Hohe Priorität",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Rechnungen & Finanzen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Werbung",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Bewerbung",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [],
+        []
+      ]
+    },
+    "Send_Email": {
+      "ai_tool": [
+        [
+          {
+            "node": "Gmail Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email_Reply": {
+      "ai_tool": [
+        [
+          {
+            "node": "Gmail Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Label_Emails": {
+      "ai_tool": [
+        [
+          {
+            "node": "Gmail Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create_Draft": {
+      "ai_tool": [
+        [
+          {
+            "node": "Gmail Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get_Emails": {
+      "ai_tool": [
+        [
+          {
+            "node": "Gmail Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get_Labels": {
+      "ai_tool": [
+        [
+          {
+            "node": "Gmail Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark_Unread": {
+      "ai_tool": [
+        [
+          {
+            "node": "Gmail Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Agent": {
+      "main": [
+        [
+          {
+            "node": "Gmail Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Gmail Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Download File",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set 'Text'",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Download File1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download File": {
+      "main": [
+        [
+          {
+            "node": "Transcribe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger1": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcribe": {
+      "main": [
+        [
+          {
+            "node": "Intent Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set 'Text'": {
+      "main": [
+        [
+          {
+            "node": "Intent Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Folder": {
+      "main": [
+        [
+          {
+            "node": "Get File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Folder": {
+      "main": [
+        [
+          {
+            "node": "Exists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Exists": {
+      "main": [
+        [
+          {
+            "node": "Get File",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Folder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get File": {
+      "main": [
+        [
+          {
+            "node": "Upload File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload File": {
+      "main": [
+        [
+          {
+            "node": "Inform User",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze PDF": {
+      "main": [
+        [
+          {
+            "node": "OpenAI3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI3": {
+      "main": [
+        [
+          {
+            "node": "Update EüR ",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Search Folder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download File1": {
+      "main": [
+        [
+          {
+            "node": "Analyze PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI5": {
+      "main": [
+        [
+          {
+            "node": "Telegram3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bewerbung": {
+      "main": [
+        [
+          {
+            "node": "OpenAI5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "3c82e23e-dff2-4f0d-a910-e08354cf45da",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6e23d6e5e8e5afdb96d994c40b9a415e9c1ffbb9fc3b5c9ab601aeb838ccda96"
+  },
+  "id": "tkXf3fQLwlzSjneR",
+  "tags": []
+}
